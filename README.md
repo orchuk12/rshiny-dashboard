@@ -1,3 +1,5 @@
+- Access the dashboard using this link: https://rayyanshekhani.shinyapps.io/fit5147_dvp/
+
 - Use Google Chrome
 
 - Set Google Chrome zoom to 80%
