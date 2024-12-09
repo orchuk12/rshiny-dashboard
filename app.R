@@ -42,7 +42,7 @@ plot_list <- lapply(unique(overall_participation_rate$year), function(year) {
 
 # Define UI for application
 ui <- 
-  dashboardPage(title = "Rayyan Aamir DVP (32065647)",
+  dashboardPage(title = "Rshiny Dashboard",
   dashboardHeader(title = span(
     tags$style(HTML("
       .main-header .logo {
@@ -51,7 +51,7 @@ ui <-
         font-wight: bold;
       }
     ")),
-    "Data Visualization Project - Rayyan Aamir (32065647)"
+    "Dashboard on Migration & Education for Australia's Labour Force"
   ),
   titleWidth = "97%"
   ),
@@ -79,7 +79,7 @@ ui <-
     shinyDashboardThemes(theme = "poor_mans_flatly"),
     tabItems(
       tabItem(tabName = "intro",
-              h1("Impact of Overseas Migration and Education Levels on Australia’s Labour Force",
+              h1("Impact of Migration and Education Levels on Australia’s Labour Force",
                  br(),
                  br(),
                  style = "text-align: center; font-weight: bold"),
@@ -87,45 +87,47 @@ ui <-
                  style = "text-align: center; font-weight: bold"),
               fluidRow(
                 column(width = 2),
-                column(width = 4,
-                       h4("This dashboard is the visualization aspect of the Data Visualization
-                          Project for the unit Data Visualization and Exploration (FIT5147) taken
-                          in Semester 1 of 2024 at Monash University Clayton Campus. This dashboard
+                column(width = 8,
+                       h4("This dashboard
                           aims to display some statistics and visualizations of the different states
                           in Australia. Overseas migration and education levels are amongst 
-                          the many factors that affect the various aspects of the", 
+                          the many factors that affect the various aspects of the labour force 
+                          such as unemployment & participation rates and income levels. With this 
+                          visualization, the aim is to portray a message to the public who wish 
+                          to become more educated on the matter, and potential policy makers to 
+                          be notified to the issues at hand, to which they may go forth and 
+                          deeper into the issues highlighted here.", 
                           style = "font-size: 28px; font-family: 'Times New Roman'; 
-                          text-align: justify;")),
-                column(width = 4,
-                       h4("labour force such as unemployment & participation rates and income levels.
-                       With this visualization the author of this dashboard aims to portray a general
-                          message to the public who wish to become more educated on the matter, and
-                          potential policy makers to be introduced to the issues at hand, to which 
-                          they may go forth and deeper into the issues highlighted here.", 
-                          style = "font-size: 28px; font-family: 'Times New Roman'; 
-                          text-align: justify;")),
+                          text-align: center;")),
                 column(width = 2)),
               
               h2("How To Use",
                  style = "text-align: center; font-weight: bold"),
               fluidRow(
                 column(width = 2),
-                column(width = 4,
-                         h4("Using this visualization dashboard is very simple, locate the navigation
+                column(width = 8,
+                         h4("Using this dashboard is very simple, locate the navigation
                             tab which is visible on the left-hand side of this screen, where the user 
                             may toggle between different pages related to the title mentioned on the 
-                            menu. Within these pages are various ",
-                          style = "font-size: 28px; font-family: 'Times New Roman'; 
-                          text-align: justify;")),
-                column(width = 4,
-                       h4("visualizations that are interactive to the user's will. This includes 
+                            menu. Within these pages are various visualizations that are interactive
+                            to the user's will. This includes 
                        hovering, filtering,
-                          and playing a short animation. Within these pages there are explanations as
-                          to the current display on the page.",
+                          and playing a short animation. Within these tabs there are explanations as
+                          to the current display on the page demonstrates.",
                           style = "font-size: 28px; font-family: 'Times New Roman'; 
-                          text-align: justify;")),
+                          text-align: center;")),
                 column(width = 2)
-                )
+                ),
+              
+              fluidRow(
+                column(width = 2),
+                column(width = 8,
+                       h4("Note: Kindly allow sufficient time for the graphs and diagrams to 
+                          load, often they may take more than a couple seconds.",
+                          style = "font-size: 28px; font-family: 'Times New Roman'; 
+                          text-align: center; font-weight: bold")),
+                column(width = 2)
+              )
               ),
       
       tabItem(tabName = "slide1",
