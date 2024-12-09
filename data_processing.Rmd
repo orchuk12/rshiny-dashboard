@@ -1,0 +1,738 @@
+---
+title: "dvp data processing file"
+author: "Rayyan"
+output: html_document
+---
+
+# Coding from DEP to clean the datasets for the DVP
+
+```{r message = FALSE, warning = FALSE}
+
+# Loading Libraries
+
+library(tidyverse)
+library(janitor)
+library(readxl)
+library(networkD3)
+library(htmlwidgets)
+library(highcharter)
+library(openxlsx)
+library(gplots)
+library(gridExtra)
+library(lmtest)
+library(treemap)
+library(leaflet)
+library(gganimate)
+library(av)
+library(purrr)
+library(broom)
+library(kableExtra)
+
+```
+
+## Employee Earnings
+
+```{r message = FALSE, warning = FALSE}
+# Loading Datasets
+
+employee_earnings <- 
+  read_excel("data/63370_Table05.xlsx",
+             sheet = "Data 5",
+             skip = 5)
+
+employee_earnings[1, 1] <- "Survey month"
+employee_earnings[1, 2] <- "State and territory"
+employee_earnings[1, 3] <- "Leave entitlements"
+employee_earnings[1, 4] <- "Level of highest non-school qualification"
+employee_earnings[1, 5] <- "Classification"
+employee_earnings[1, 6] <- "Category"
+
+employee_earnings[1, 7] <- "Persons_Median weekly_earnings"
+employee_earnings[1, 8] <- "Persons_Median weekly_earnings_rse"
+employee_earnings[1, 9] <- "Persons_Median hourly_earnings"
+employee_earnings[1, 10] <- "Persons_Median hourly_earnings_rse"
+employee_earnings[1, 11] <- "Persons_Employees_1000s"
+employee_earnings[1, 12] <- "Persons_Employees_1000s_rse"
+
+employee_earnings[1, 13] <- "Male_Median weekly_earnings"
+employee_earnings[1, 14] <- "Male_Median weekly_earnings_rse"
+employee_earnings[1, 15] <- "Male_Median hourly_earnings"
+employee_earnings[1, 16] <- "Male_Median hourly_earnings_rse"
+employee_earnings[1, 17] <- "Male_Employees_1000s"
+employee_earnings[1, 18] <- "Male_Employees_1000s_rse"
+
+employee_earnings[1, 19] <- "Female_Median weekly_earnings"
+employee_earnings[1, 20] <- "Female_Median weekly_earnings_rse"
+employee_earnings[1, 21] <- "Female_Median hourly_earnings"
+employee_earnings[1, 22] <- "Female_Median hourly_earnings_rse"
+employee_earnings[1, 23] <- "Female_Employees_1000s"
+employee_earnings[1, 24] <- "Female_Employees_1000s_rse"
+
+
+employee_earnings_tidy <- employee_earnings[-2,]
+
+# Setting Column 1 observations as variable names
+colnames(employee_earnings_tidy) <- employee_earnings_tidy[1, ]
+
+# Removing original column 1
+employee_earnings_tidy <- employee_earnings_tidy[-1, ]
+
+employee_earnings_tidy[, 7:24] <- apply(employee_earnings_tidy[, 7:24], 2, function(x) as.numeric(as.character(x)))
+
+```
+
+
+```{r message = FALSE, warning = FALSE}
+
+employee_earnings_tidy <- clean_names(employee_earnings_tidy)
+
+employee_earnings_tidy[, c(7, 9, 13, 15, 19, 21)] <- 
+  round(employee_earnings_tidy[, c(7, 9, 13, 15, 19, 21)], 1)
+
+employee_earnings_tidy[, c(8, 10, 12, 14, 16, 18, 20, 22, 24)] <- 
+  round(employee_earnings_tidy[, c(8, 10, 12, 14, 16, 18, 20, 22, 24)], 2)
+
+
+```
+
+```{r}
+
+lm_data <- employee_earnings_tidy %>%
+  filter(category == "Full-time")
+
+# Fit a linear regression model
+lm_model <- lm(persons_median_weekly_earnings ~ level_of_highest_non_school_qualification, data = lm_data)
+
+# Check the summary of the regression model
+summary(lm_model)
+
+# Extract coefficients and p-values
+coefficients <- coef(lm_model)
+p_values <- coef(summary(lm_model))[, "Pr(>|t|)"]
+
+#Print coefficients and p-values
+print(coefficients)
+print(p_values)
+
+```
+
+
+## Weekly Earning by Degree
+
+```{r message = FALSE, warning = FALSE}
+
+weekly_earning_degree <-
+  read_csv("data/Median weekly earnings in main job, by highest educational qualification.csv",
+           skip = 1)
+
+weekly_earning_degree <- weekly_earning_degree %>%
+  rename(Degree = '...1') %>%
+  clean_names() %>%
+  rename("2018" = x2018,
+         "2023" = x2023)
+
+weekly_earning_degree <- as.data.frame(weekly_earning_degree)
+
+```
+
+```{r}
+
+degree_pivot <- weekly_earning_degree %>%
+  pivot_longer(cols = -degree,
+               names_to = "year",
+               values_to = "weekly_earning")
+
+```
+
+
+## Weekly Earning by Gender
+
+```{r message = FALSE, warning = FALSE}
+
+weekly_earning_gender <- 
+  read_csv("data/Median weekly earnings in main job, by sex and full-time or part-time status.csv",
+           skip = 1)
+
+weekly_earning_gender <- weekly_earning_gender %>%
+  rename(Year = '...1') %>%
+  clean_names()
+
+weekly_earning_gender[, 2:5] <- 
+  round(weekly_earning_gender[, 2:5], 1)
+
+gender_filter <- weekly_earning_gender %>%
+  filter(year >= 2018) %>%
+  pivot_longer(cols = -year,
+               names_to = "type",
+               values_to = "amount")
+
+summary_data <- gender_filter %>%
+  group_by(type, year) %>%
+  summarize(mean_amount = mean(amount))
+
+# Plot the summarized data
+# below
+
+```
+
+## Participation Rate and Unemployment Rate
+```{r message = FALSE, warning = FALSE}
+
+participation_rate <- 
+  read_csv("data/Participation rate, Australia, August 1966 to January 2024, Seasonally adjusted.csv", skip =1)
+
+participation_rate <- participation_rate %>%
+  rename(Year = '...1') %>%
+  clean_names()
+
+```
+
+```{r message = FALSE, warning = FALSE}
+
+unemployment_rate <- 
+  read_csv("data/Unemployment rate, Australia, August 1966 to January 2024, Seasonally adjusted.csv", skip = 1)
+
+unemployment_rate <- unemployment_rate %>%
+  rename(Year = '...1') %>%
+  clean_names()
+```
+
+
+```{r}
+
+workforce <- left_join(unemployment_rate,
+                       participation_rate,
+                       by = "year")
+
+workforce <- workforce %>%
+  rename(unemployment_persons = persons_percent.x) %>%
+  rename(unemployment_male = males_percent.x) %>%
+  rename(unemployment_female = females_percent.x) %>%
+  rename(participation_persons = persons_percent.y) %>%
+  rename(participation_male = males_percent.y) %>%
+  rename(participation_female = females_percent.y)
+
+workforce <- separate(workforce, year, into = c("month", "year"), sep = "-")
+
+workforce <- workforce %>%
+  mutate(year = as.numeric(year))
+
+workforce$year <- ifelse(as.numeric(workforce$year) <= 24, 
+                         as.character(as.numeric(workforce$year) + 2000), 
+                         paste0("19", workforce$year))
+
+workforce <- workforce %>%
+  mutate(year = as.numeric(year))
+
+workforce2 <- workforce %>%
+  filter(year >= 2000)
+
+```
+
+```{r}
+workforce_plot <- workforce %>%
+  filter(year >= 2018 & year < 2024) %>%
+  pivot_longer(cols = -c(month, year),
+               names_to = "type",
+               values_to = "percentage")
+
+workforce_plot <- workforce_plot %>%
+  group_by(type, year) %>%
+  mutate(avg_value = mean(percentage))
+        
+```
+
+```{r}
+
+# Convert month to numeric representation
+workforce2$month_numeric <- match(tolower(workforce2$month), tolower(month.abb))
+
+# Convert month and year to a single date column
+workforce2$date <- as.Date(ISOdate(workforce2$year, workforce2$month_numeric, 1))
+
+# Remove month and year columns if you no longer need them
+workforce2 <- subset(workforce2, select = -c(month, year, month_numeric))
+
+# Reshape the data into a matrix format
+heatmap_data <- as.matrix(workforce2[, c("unemployment_persons", "unemployment_male", "unemployment_female", "participation_persons", "participation_male", "participation_female")])
+
+# Create the heatmap
+# below
+
+```
+
+## Overall Migration
+
+```{r message = FALSE, warning = FALSE}
+
+overall_migration <- 
+  read_excel("data/Overall Migration.xlsx",
+           sheet = "Data1")
+
+overall_migration <- overall_migration
+
+overall_migration$Year <- format(overall_migration$Year, "%b-%Y")
+
+overall_migration <- separate(overall_migration, Year, into = c("Month", "Year"), sep = "-")
+
+```
+
+
+```{r}
+
+overall_migration_long <- overall_migration %>%
+  filter(Year >= 2015) %>%
+  pivot_longer(cols = -c(Month, Year), 
+               names_to = c("Measurement Type", "State/Territory"), 
+               names_pattern = "([^;]+) ;  (.+) ;", 
+               values_to = "Value")
+
+```
+
+
+```{r}
+
+# Filter data for the years 2015-2023
+filtered_data <- overall_migration_long %>%
+  filter(Year >= 2018) %>%
+  filter(`State/Territory`!= "Australia") %>%
+  rename(State = `State/Territory`)
+
+# Calculate the total net overseas migration for each state
+migration_totals <- aggregate(Value ~ State + `Measurement Type` + Year, 
+                              data = filtered_data, 
+                              sum)
+
+migration_totals <- migration_totals %>%
+  mutate(net_increase = ifelse(Value > 0, "Increase", "Decrease"))
+
+```
+
+# Data for tooltip
+### Unemployment rate by state
+
+```{r}
+
+# Loading labour force data
+tooltip_data_unemp <- read_xlsx("data/6202012.xlsx",
+                                sheet = "Data2")
+
+tooltip_unemp_states <- tooltip_data_unemp[, 151:175]
+tooltip_unemp_states <- tooltip_unemp_states[-c(1:9), c(6,9,12,15,18,21,23,25)]
+tooltip_unemp_states <- tooltip_unemp_states %>%
+  clean_names()
+
+tooltip_unemp_states <- tooltip_unemp_states %>%
+  rename("New South Wales" = unemployment_rate_persons_new_south_wales_156) %>%
+  rename("Victoria" = unemployment_rate_persons_victoria_159) %>%
+  rename("Queensland" = unemployment_rate_persons_queensland_162) %>%
+  rename("South Australia" = unemployment_rate_persons_south_australia_165) %>%
+  rename("Western Australia" = unemployment_rate_persons_western_australia_168) %>%
+  rename("Tasmania" = unemployment_rate_persons_tasmania_171) %>%
+  rename("Northern Territory" = unemployment_rate_persons_northern_territory_173) %>%
+  rename("Australian Capital Territory" = unemployment_rate_persons_australian_capital_territory_175)
+
+# Adding date
+start_date <- as.Date("1978-02-01")
+end_date <- as.Date("2024-04-01")
+date_sequence <- seq(from = start_date, to = end_date, by = "month")
+tooltip_unemp_states$date <- date_sequence
+
+tooltip_unemp_states <- tooltip_unemp_states %>%
+  filter(date >= as.Date("2023-01-01"))
+
+tooltip_unemp_states <- tooltip_unemp_states[, c(9, 1:8)]
+
+# Converting to numeric
+tooltip_unemp_states[,-1] <- lapply(tooltip_unemp_states[,-1], as.numeric)
+
+# Converting to long format
+state_averages <- tooltip_unemp_states %>%
+  pivot_longer(cols = -date, 
+               names_to = "state", 
+               values_to = "unemployment")
+
+# Getting mean
+tp_final_1 <- state_averages %>%
+  group_by(state) %>%
+  summarise(average_unemployment = mean(unemployment))
+
+```
+
+### Participation rate by state
+
+
+```{r}
+
+# Same as above code chunk only for different statistic
+tooltip_data_participation <- read_xlsx("data/6202012.xlsx",
+                                sheet = "Data3")
+
+tooltip_part_states <- tooltip_data_participation[, 120:141]
+tooltip_part_states <- tooltip_part_states[-c(1:9), c(3,6,9,12,15,18,20,22)]
+tooltip_part_states <- tooltip_part_states %>%
+  clean_names()
+
+tooltip_part_states <- tooltip_part_states %>%
+  rename("New South Wales" = participation_rate_persons_new_south_wales_122) %>%
+  rename("Victoria" = participation_rate_persons_victoria_125) %>%
+  rename("Queensland" = participation_rate_persons_queensland_128) %>%
+  rename("South Australia" = participation_rate_persons_south_australia_131) %>%
+  rename("Western Australia" = participation_rate_persons_western_australia_134) %>%
+  rename("Tasmania" = participation_rate_persons_tasmania_137) %>%
+  rename("Northern Territory" = participation_rate_persons_northern_territory_139) %>%
+  rename("Australian Capital Territory" = participation_rate_persons_australian_capital_territory_141)
+
+start_date <- as.Date("1978-02-01")
+end_date <- as.Date("2024-04-01")
+date_sequence <- seq(from = start_date, to = end_date, by = "month")
+tooltip_part_states$date <- date_sequence
+
+tooltip_part_states <- tooltip_part_states %>%
+  filter(date >= as.Date("2023-01-01"))
+
+tooltip_part_states <- tooltip_part_states[, c(9, 1:8)]
+
+tooltip_part_states[,-1] <- lapply(tooltip_part_states[,-1], as.numeric)
+
+state_averages_part <- tooltip_part_states %>%
+  pivot_longer(cols = -date, 
+               names_to = "state", 
+               values_to = "participation")
+
+tp_final_2 <- state_averages_part %>%
+  group_by(state) %>%
+  summarise(average_participation = mean(participation))
+
+```
+
+### Migration Rates
+
+```{r}
+
+migration_stats <- overall_migration_long %>%
+  group_by(`State/Territory`, `Measurement Type`) %>%
+  summarise(Average_Value = mean(Value))
+
+tp_final_3 <- migration_stats %>%
+  pivot_wider(names_from = `Measurement Type`, values_from = Average_Value)
+
+tp_final_3 <- tp_final_3[-1,]
+
+tp_final_3 <- tp_final_3 %>%
+  rename("state" = `State/Territory`)
+
+```
+
+### Average income
+
+```{r}
+
+tooltip_avg_incom <- employee_earnings_tidy %>%
+  filter(classification == "Full-time or part-time status",
+         leave_entitlements == "Total employees",
+         level_of_highest_non_school_qualification == "Total")
+
+tooltip_avg_incom <- tooltip_avg_incom[, c(2,6,7)]
+
+tp_final_4 <- tooltip_avg_incom %>%
+  group_by(state_and_territory, category) %>%
+  summarise(average_value = mean(persons_median_weekly_earnings))
+
+tp_final_4 <- tp_final_4 %>%
+  pivot_wider(names_from = category,
+              values_from = average_value)
+
+tp_final_4 <- tp_final_4 %>%
+  filter(state_and_territory != "Australia") %>%
+  rename("state" = state_and_territory)
+
+```
+
+### Coordinates
+
+```{r}
+
+# Adding coordinates for the biggest cities in all of the states of Australia
+# this is done for leaflet map purposes.
+tp_final_5 <- data.frame(
+  state = c("New South Wales", "Victoria", "Queensland", "South Australia", "Western Australia", "Tasmania", "Northern Territory", "Australian Capital Territory"),
+  Latitude = c(-33.8688, -37.8136, -27.4698, -34.9285, -31.9505, -42.8821, -12.4634, -35.2809),
+  Longitude = c(151.2093, 144.9631, 153.0251, 138.6007, 115.8605, 147.3272, 130.8456, 149.1300)
+)
+
+```
+
+
+
+### Creating one dataset for tooltip data
+
+```{r}
+
+final_tooltip_data <- right_join(tp_final_1, 
+                                 tp_final_2,
+                                 by = "state")
+
+final_tooltip_data <- right_join(final_tooltip_data, 
+                                 tp_final_3,
+                                 by = "state")
+
+final_tooltip_data <- right_join(final_tooltip_data, 
+                                 tp_final_4,
+                                 by = "state")
+
+final_tooltip_data <- right_join(final_tooltip_data, 
+                                 tp_final_5,
+                                 by = "state")
+
+final_tooltip_data <- final_tooltip_data %>%
+  clean_names()
+
+final_tooltip_data[, 2:3] <- lapply(final_tooltip_data[, 2:3], round, digits = 2)
+final_tooltip_data[, 4:7] <- lapply(final_tooltip_data[, 4:7], round, digits = 0)
+final_tooltip_data[, 8:9] <- lapply(final_tooltip_data[, 8:9], round, digits = 1)
+
+write.xlsx(final_tooltip_data, "data_clean/tooltip_data.xlsx")
+
+```
+
+# Data for Slide 2
+
+```{r}
+
+# Bar graph data for weekly earnings by employment type and by gender
+
+slide2_data1 <- employee_earnings_tidy %>%
+  filter(classification == "Full-time or part-time status",
+         leave_entitlements == "Total employees",
+         level_of_highest_non_school_qualification == "Total")
+
+slide2_data1 <- slide2_data1[, c(2,6,13,19)]
+
+data1_years <- rep(2014:2023, each = 18)
+
+slide2_data1$year <- data1_years
+
+slide2_data1 <- slide2_data1[, c(5, 1:4)]
+
+slide2_data1 <- slide2_data1 %>%
+  rename("male" = male_median_weekly_earnings) %>%
+  rename("female" = female_median_weekly_earnings)
+
+slide2_data1 <- slide2_data1 %>%
+  pivot_longer(cols = -c(year, category, state_and_territory),
+               names_to = "gender",
+               values_to = "weekly_income")
+
+
+write.xlsx(slide2_data1, "data_clean/weekly_earning_state.xlsx")
+
+```
+
+
+```{r}
+
+# Data for violin plot
+slide2_data2 <- read_xlsx("data/6202012.xlsx",
+                                sheet = "Data3")
+
+slide2_data2_part1 <- slide2_data2[, 117:141]
+slide2_data2_part1 <- slide2_data2_part1[-c(1:9), c(3,6,9,12,15,18,21,23,25)]
+slide2_data2_part1 <- slide2_data2_part1 %>%
+  clean_names()
+
+slide2_data2_part1 <- slide2_data2_part1 %>%
+  rename("Australia" = participation_rate_persons_australia_119) %>%
+  rename("New South Wales" = participation_rate_persons_new_south_wales_122) %>%
+  rename("Victoria" = participation_rate_persons_victoria_125) %>%
+  rename("Queensland" = participation_rate_persons_queensland_128) %>%
+  rename("South Australia" = participation_rate_persons_south_australia_131) %>%
+  rename("Western Australia" = participation_rate_persons_western_australia_134) %>%
+  rename("Tasmania" = participation_rate_persons_tasmania_137) %>%
+  rename("Northern Territory" = participation_rate_persons_northern_territory_139) %>%
+  rename("Australian Capital Territory" = participation_rate_persons_australian_capital_territory_141)
+
+start_date1 <- as.Date("1978-02-01")
+end_date1 <- as.Date("2024-04-01")
+date_sequence1 <- seq(from = start_date1, to = end_date1, by = "month")
+slide2_data2_part1$date <- date_sequence1
+
+slide2_data2_part1 <- slide2_data2_part1 %>%
+  filter(date >= as.Date("2014-01-01"))
+
+slide2_data2_part1 <- slide2_data2_part1[, c(10, 1:9)]
+
+slide2_data2_part1[,-1] <- lapply(slide2_data2_part1[,-1], as.numeric)
+
+slide2_data2_part1 <- slide2_data2_part1 %>%
+  mutate(year = format(date, "%Y")) %>%
+  group_by(year) %>%
+  summarize(across(c(Australia, `New South Wales`, Victoria, Queensland, 
+                     `South Australia`, `Western Australia`, Tasmania, `Northern Territory`, 
+                     `Australian Capital Territory`), 
+                   mean, 
+                   na.rm = TRUE)) %>%
+  ungroup()
+
+slide2_data2_final <- slide2_data2_part1 %>%
+  pivot_longer(cols = -year, 
+               names_to = "state", 
+               values_to = "participation")
+
+write.xlsx(slide2_data2_final, "data_clean/overall_participation_rate.xlsx")
+
+```
+
+# Downloading clean datasets for smoother shiny app development
+# Testing visualizations and models
+
+```{r}
+
+# Downloading migration total dataframe
+
+write_csv(migration_totals, "data_clean/migration_totals.csv")
+
+```
+
+```{r}
+
+degree_pivot %>%
+ggplot(aes(x = year, y = weekly_earning, fill = degree, group = degree)) + 
+  geom_area(alpha = 0.6, 
+            size = 1, 
+            colour = "black", 
+            stat = 'identity') + 
+  theme_minimal() +
+  labs(title = "Area Plot of Weekly Earnings by Degree and Year", 
+       x = "Year", 
+       y = "Weekly Earning") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_brewer(palette = "Set1")
+
+```
+
+```{r}
+
+table(employee_earnings_tidy$level_of_highest_non_school_qualification)
+
+
+slide3_data1 <- employee_earnings_tidy %>%
+  filter(classification == "Full-time or part-time status",
+         leave_entitlements == "Total employees")
+
+slide3_data1 <- slide3_data1[, c(2,4,6,13,19)]
+
+slide3_data1_years <- rep(2014:2023, each = 180)
+
+slide3_data1$year <- slide3_data1_years
+
+slide3_data1 <- slide3_data1[, c(6, 1:5)]
+
+slide3_data1 <- slide3_data1 %>%
+  rename("male" = male_median_weekly_earnings) %>%
+  rename("female" = female_median_weekly_earnings)
+
+slide3_data1 <- slide3_data1 %>%
+  pivot_longer(cols = -c(year, 
+                         category,
+                         state_and_territory, 
+                         level_of_highest_non_school_qualification),
+               names_to = "gender",
+               values_to = "weekly_income")
+
+states <- unique(slide3_data1$state_and_territory)
+
+state_data_list <- split(slide3_data1, slide3_data1$state_and_territory)
+
+write.xlsx(slide3_data1, "data_clean/state_data.xlsx")
+
+```
+
+
+```{r}
+
+lm_data1 <- slide3_data1 %>%
+  filter(category == "Full-time")
+
+# Step 2: Split the data by state
+state_data_list <- split(lm_data1, lm_data1$state_and_territory)
+
+# Step 3: Function to fit the linear model and extract coefficients and p-values
+fit_lm_extract <- function(data) {
+  lm_model <- lm(weekly_income ~ level_of_highest_non_school_qualification, data = data)
+  tidy_model <- tidy(lm_model)
+  
+  # Select and rename relevant columns
+  tidy_model %>%
+    select(term, estimate, p.value) %>%
+    rename(
+      education_type = term,
+      coefficient = estimate,
+      pvalue = p.value
+    )
+}
+
+# Step 4: Apply the function to each state and add a column for state name
+results <- map_dfr(names(state_data_list), function(state) {
+  state_data <- state_data_list[[state]]
+  state_results <- fit_lm_extract(state_data)
+  state_results %>%
+    mutate(state = state)
+})
+
+# Step 5: Print the final combined results
+
+results <- results %>%
+  mutate(education_type = str_trim(sub("level_of_highest_non_school_qualification", "", education_type)))
+
+print(results)
+
+# Download
+
+write.xlsx(results, "data_clean/lm_model_full_time.xlsx")
+
+```
+
+```{r}
+
+lm_part_time <- read.xlsx("data_clean/lm_model_part_time.xlsx")
+lm_full_time <- read.xlsx("data_clean/lm_model_full_time.xlsx")
+
+
+head(lm_full_time)
+head(lm_part_time)
+
+lm_full_time %>%
+  filter(state == "Victoria") %>%
+  kable(caption = paste("Linear Regression Model for Victoria")) %>%
+  row_spec(0, background = "white")
+
+
+
+```
+
+```{r}
+
+state_data_list$Victoria %>%
+  ggplot(aes(x = year, y = weekly_income, fill = level_of_highest_non_school_qualification)) +
+  geom_violin(trim = FALSE, scale = "width") +
+  theme_bw() +
+  scale_x_continuous(breaks = seq(2014, 2023, by = 1)) +
+  scale_y_continuous(breaks = seq(
+    min(slide3_data1$weekly_income),
+    max(slide3_data1$weekly_income), 
+    by = 500)) +
+  labs(title = paste("Violin Plot of Income Distribution by Education Type in", 
+                     state_data_list$Victoria$state_and_territory),
+       x = "Year",
+       y = "Weekly Income",
+       fill = "Education Type")
+
+chunk38 <- state_data_list[["Victoria"]]
+
+table(chunk38$state_and_territory)
+
+```
+
+
+
