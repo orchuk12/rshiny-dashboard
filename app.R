@@ -23,6 +23,8 @@ lm_part_time <- read.xlsx("data_clean/lm_model_part_time.xlsx")
 lm_full_time <- read.xlsx("data_clean/lm_model_full_time.xlsx")
 state_data <- read.xlsx("data_clean/state_data.xlsx")
 
+y_range <- range(overall_participation_rate$participation, na.rm = TRUE)
+
 plot_list <- lapply(unique(overall_participation_rate$year), function(year) {
   overall_participation_rate %>%
     filter(year == !!year) %>%
@@ -31,6 +33,7 @@ plot_list <- lapply(unique(overall_participation_rate$year), function(year) {
     labs(title = paste("Average Participation Rate in", year),
          x = "Year",
          y = "Participation Rate") +
+    scale_y_continuous(limits = y_range, breaks = seq(60, 75, 5)) +
     theme_minimal() +
     theme_bw() +
     theme(axis.text.y = element_text(size = 14),
