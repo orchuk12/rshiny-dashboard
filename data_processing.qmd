@@ -1,14 +1,25 @@
 ---
-title: "dvp data processing file"
-author: "Rayyan"
-output: html_document
+title: "Data Processing"
+format: html
 ---
 
-# Coding from DEP to clean the datasets for the DVP
+#### This document cleans and documents the process whilst also testing some visualizations techniques to be used within the dashboard
+
+```{r}
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  messages = FALSE,
+  eval = FALSE
+)
+
+
+```
 
 ```{r message = FALSE, warning = FALSE}
 
-# Loading Libraries
+# Loading all libraries required
 
 library(tidyverse)
 library(janitor)
@@ -33,7 +44,8 @@ library(kableExtra)
 ## Employee Earnings
 
 ```{r message = FALSE, warning = FALSE}
-# Loading Datasets
+
+# Loading "employee earnings" dataset
 
 employee_earnings <- 
   read_excel("data/63370_Table05.xlsx",
@@ -77,10 +89,12 @@ colnames(employee_earnings_tidy) <- employee_earnings_tidy[1, ]
 # Removing original column 1
 employee_earnings_tidy <- employee_earnings_tidy[-1, ]
 
-employee_earnings_tidy[, 7:24] <- apply(employee_earnings_tidy[, 7:24], 2, function(x) as.numeric(as.character(x)))
+employee_earnings_tidy[, 7:24] <- 
+  apply(employee_earnings_tidy[, 7:24], 
+        2, 
+        function(x) as.numeric(as.character(x)))
 
 ```
-
 
 ```{r message = FALSE, warning = FALSE}
 
@@ -101,7 +115,9 @@ lm_data <- employee_earnings_tidy %>%
   filter(category == "Full-time")
 
 # Fit a linear regression model
-lm_model <- lm(persons_median_weekly_earnings ~ level_of_highest_non_school_qualification, data = lm_data)
+lm_model <- 
+  lm(persons_median_weekly_earnings ~ level_of_highest_non_school_qualification, 
+     data = lm_data)
 
 # Check the summary of the regression model
 summary(lm_model)
@@ -110,16 +126,17 @@ summary(lm_model)
 coefficients <- coef(lm_model)
 p_values <- coef(summary(lm_model))[, "Pr(>|t|)"]
 
-#Print coefficients and p-values
+# Print coefficients and p-values
 print(coefficients)
 print(p_values)
 
 ```
 
-
 ## Weekly Earning by Degree
 
 ```{r message = FALSE, warning = FALSE}
+
+# Loading "weekly earnings by degree" dataset
 
 weekly_earning_degree <-
   read_csv("data/Median weekly earnings in main job, by highest educational qualification.csv",
@@ -149,6 +166,8 @@ degree_pivot <- weekly_earning_degree %>%
 
 ```{r message = FALSE, warning = FALSE}
 
+# Loading "weekly earnings by gender" dataset
+
 weekly_earning_gender <- 
   read_csv("data/Median weekly earnings in main job, by sex and full-time or part-time status.csv",
            skip = 1)
@@ -176,7 +195,10 @@ summary_data <- gender_filter %>%
 ```
 
 ## Participation Rate and Unemployment Rate
+
 ```{r message = FALSE, warning = FALSE}
+
+# Loading "participation rate" dataset
 
 participation_rate <- 
   read_csv("data/Participation rate, Australia, August 1966 to January 2024, Seasonally adjusted.csv", skip =1)
@@ -189,12 +211,15 @@ participation_rate <- participation_rate %>%
 
 ```{r message = FALSE, warning = FALSE}
 
+# Loading "unemployment rate" dataset
+
 unemployment_rate <- 
   read_csv("data/Unemployment rate, Australia, August 1966 to January 2024, Seasonally adjusted.csv", skip = 1)
 
 unemployment_rate <- unemployment_rate %>%
   rename(Year = '...1') %>%
   clean_names()
+
 ```
 
 
@@ -230,6 +255,7 @@ workforce2 <- workforce %>%
 ```
 
 ```{r}
+
 workforce_plot <- workforce %>%
   filter(year >= 2018 & year < 2024) %>%
   pivot_longer(cols = -c(month, year),
@@ -254,16 +280,20 @@ workforce2$date <- as.Date(ISOdate(workforce2$year, workforce2$month_numeric, 1)
 workforce2 <- subset(workforce2, select = -c(month, year, month_numeric))
 
 # Reshape the data into a matrix format
-heatmap_data <- as.matrix(workforce2[, c("unemployment_persons", "unemployment_male", "unemployment_female", "participation_persons", "participation_male", "participation_female")])
-
-# Create the heatmap
-# below
+heatmap_data <- as.matrix(workforce2[, c("unemployment_persons", 
+                                         "unemployment_male", 
+                                         "unemployment_female", 
+                                         "participation_persons", 
+                                         "participation_male", 
+                                         "participation_female")])
 
 ```
 
 ## Overall Migration
 
 ```{r message = FALSE, warning = FALSE}
+
+# Loading dataset for "overall migration"
 
 overall_migration <- 
   read_excel("data/Overall Migration.xlsx",
@@ -308,8 +338,10 @@ migration_totals <- migration_totals %>%
 
 ```
 
-# Data for tooltip
+## Data for tooltip
 ### Unemployment rate by state
+
+This is the data that is being used and optimized for the tooltip which will be present upon hovering on the interactive map that is available to the user in the dashboard.
 
 ```{r}
 
@@ -360,7 +392,6 @@ tp_final_1 <- state_averages %>%
 ```
 
 ### Participation rate by state
-
 
 ```{r}
 
@@ -462,8 +493,6 @@ tp_final_5 <- data.frame(
 )
 
 ```
-
-
 
 ### Creating one dataset for tooltip data
 
